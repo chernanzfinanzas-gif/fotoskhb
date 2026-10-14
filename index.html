@@ -124,7 +124,45 @@ main{padding-bottom:calc(var(--barra) + env(safe-area-inset-bottom))}
 #barraSel .t{flex:1;font-size:13.5px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .boton{background:var(--verde);color:#fff;border:0;border-radius:10px;padding:9px 14px;font-weight:600;cursor:pointer}
 .boton.sec{background:var(--verde-claro);color:var(--verde)}
-#vPersonas{padding-bottom:70px}
+#vPersonas,#vFamilia{padding-bottom:70px}
+.familia{padding:8px 12px 20px;max-width:1100px;margin:0 auto}
+.lados{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:0;background:var(--papel);border-radius:16px;box-shadow:var(--sombra);padding:12px 0 16px}
+.lados>.lado{background:none;box-shadow:none;border-radius:0;padding:0 4px}
+.gen.alDer{justify-content:flex-end}.gen.alIzq{justify-content:flex-start}
+.gen.alDer>.unidad:last-child .pareja{border-radius:14px 0 0 14px;margin-right:-4px;padding-right:14px}
+.gen.alIzq>.unidad:first-child .pareja{border-radius:0 14px 14px 0;margin-left:-4px;padding-left:14px;position:relative}
+.gen.alIzq>.unidad:first-child .pareja::before{content:"♥";position:absolute;left:-7px;top:50%;margin-top:-28px;color:var(--gris);font-size:14px}
+.lados>.lado{display:grid;grid-template-rows:subgrid;grid-row:span var(--filas,4)}
+@media (max-width:820px){.lados{display:flex;flex-direction:column;gap:18px}.lados>.lado{display:block}.gen.vacia{display:none}.gen.alDer,.gen.alIzq{justify-content:center}.gen.alDer>.unidad .pareja,.gen.alIzq>.unidad .pareja{border-radius:14px!important;margin:0!important;padding:6px 8px!important}.gen.alIzq>.unidad .pareja::before{display:none}}
+.gen.vacia::before,.gen.tras-vacia::before{display:none}
+.gen{align-items:flex-start}
+.fper.grande{width:118px}.fper.grande .cara{width:98px;height:98px}.fper.grande .nom{font-size:15px}
+.unidad .hijos{width:100%}
+.lado{background:var(--papel);border-radius:16px;box-shadow:var(--sombra);padding:12px 10px 16px}
+.lado h3,.rama h3{margin:4px 6px 10px;font-size:15px;color:var(--verde)}
+.gen{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;position:relative;margin:0 0 22px}
+.gen:not(:first-of-type)::before{content:"";position:absolute;top:-20px;left:50%;height:16px;border-left:2px solid var(--linea)}
+.unidad{display:flex;flex-direction:column;align-items:center;gap:4px}
+.unidad .nota{font-size:11px;color:var(--gris);text-transform:uppercase;letter-spacing:.5px}
+.pareja{display:flex;gap:4px;align-items:flex-start;background:var(--fondo);padding:6px 8px;border-radius:14px}
+.pareja .y{align-self:center;color:var(--gris);font-size:14px;margin-top:-18px}
+.fper{width:88px;border:0;background:none;cursor:pointer;text-align:center;padding:2px;color:inherit}
+.fper .cara{width:66px;height:66px;border-radius:50%;margin:0 auto 4px;background:var(--linea) center/cover no-repeat;border:3px solid transparent;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.fper.sel .cara{border-color:var(--verde)}
+.fper .nom{font-size:12.5px;font-weight:600;line-height:1.2}
+.fper .rel{font-size:11px;color:var(--gris);line-height:1.2}
+.fper.peq{width:74px}.fper.peq .cara{width:50px;height:50px}
+.rama{margin:22px 0 0}
+.rama h4{margin:10px 6px 6px;font-size:12px;color:var(--gris);text-transform:uppercase;letter-spacing:.5px}
+.rama .lista{display:flex;flex-wrap:wrap;gap:6px}
+.arbolRama{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start}
+.fam1{background:var(--papel);border-radius:14px;box-shadow:var(--sombra);padding:10px 8px;flex:1 1 300px}
+.fam{display:flex;flex-direction:column;align-items:center}
+.hijos{display:flex;flex-wrap:wrap;gap:8px 10px;justify-content:center;border-top:2px solid var(--linea);padding-top:8px;margin-top:6px;position:relative}
+.hijos::before{content:"";position:absolute;top:-10px;left:50%;height:8px;border-left:2px solid var(--linea)}
+.fam .hijos .pareja{background:var(--fondo)}
+.fper.libre .cara{display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:var(--gris);border:2px dashed var(--linea);box-shadow:none}
+.fper.libre{cursor:default}
 .leaflet-control-layers{font:13px system-ui,sans-serif}
 
 #entrada{position:fixed;inset:0;z-index:20000;background:var(--fondo);display:none;align-items:center;justify-content:center;padding:16px}
@@ -192,6 +230,7 @@ nav button.on{color:var(--verde)}
   <section class="vista activa" id="vFotos"><div id="lista"></div><div class="centinela" id="centinela"></div></section>
   <section class="vista" id="vMapa"><div id="mapaZona"><div id="mapa"><div class="busca" id="busca"><input id="buscaTxt" placeholder="Ir a un lugar o evento…" autocomplete="off" aria-label="Ir a un lugar"><ul id="buscaRes"></ul></div></div><aside id="panel"><div class="cab"><div class="ph" id="panelTit"></div><span class="tam" title="Tamaño de las miniaturas"><button data-d="-1">−</button><button data-d="1">+</button></span></div><div class="rejilla" id="panelRej"></div></aside></div></section>
   <section class="vista" id="vPersonas"><div class="personas" id="personas"></div></section>
+  <section class="vista" id="vFamilia"><div class="familia" id="familia"></div></section>
 </main>
 
 <div id="barraSel"><span class="t" id="selTxt"></span><button class="boton sec" id="selLimpia">Limpiar</button><button class="boton" id="selVer">Ver fotos</button></div>
@@ -200,6 +239,7 @@ nav button.on{color:var(--verde)}
   <button data-v="vFotos" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Fotos</button>
   <button data-v="vMapa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>Mapa</button>
   <button data-v="vPersonas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.6"/><path d="M15.5 14.2c3 .2 5.5 2.6 5.5 5.8"/></svg>Personas</button>
+  <button data-v="vFamilia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="4.5" r="2.2"/><circle cx="5" cy="19" r="2.2"/><circle cx="12" cy="19" r="2.2"/><circle cx="19" cy="19" r="2.2"/><path d="M12 6.7v5.3M5 16.8V12h14v4.8M12 12v4.8"/></svg>Familia</button>
 </nav>
 
 <div id="entrada">
@@ -239,9 +279,14 @@ nav button.on{color:var(--verde)}
    - Abierta desde internet (GitHub): todo se pide a pCloud con la llave de este aparato. */
 const MODO = location.protocol==="file:" ? "pc" : "nube";
 function enc(r){ return r.split("/").map(encodeURIComponent).join("/"); }
-const NUBE = { host:"eapi.pcloud.com", auth:"", raiz:"/Catalogo Fotos/30_BIBLIOTECA/", indice:"/Catalogo Fotos/visor/indice.js" };
-try{ NUBE.host=localStorage.getItem("pcHost")||NUBE.host; NUBE.auth=localStorage.getItem("pcAuth")||""; }catch(e){}
-function miniaturaNube(r,tam){ return "https://"+NUBE.host+"/getthumb?auth="+encodeURIComponent(NUBE.auth)+"&path="+encodeURIComponent(NUBE.raiz+r)+"&size="+tam+"&crop=0&type=jpeg"; }
+const NUBE = { host:"eapi.pcloud.com", auth:"", param:"auth", raiz:"/Catalogo Fotos/30_BIBLIOTECA/", indice:"/Catalogo Fotos/visor/indice.js" };
+try{ NUBE.host=localStorage.getItem("pcHost")||NUBE.host; NUBE.auth=localStorage.getItem("pcAuth")||""; NUBE.param=localStorage.getItem("pcParam")||"auth"; }catch(e){}
+// Acceso traído del PC con el código QR («Pasar acceso al móvil.bat»): va detrás de la #, que nunca sale del móvil.
+(function(){ const h=new URLSearchParams(location.hash.slice(1)); const t=h.get("acceso"); if(!t) return;
+  NUBE.auth=t; NUBE.param="access_token"; NUBE.host=h.get("host")||"eapi.pcloud.com";
+  try{ localStorage.setItem("pcAuth",t); localStorage.setItem("pcParam","access_token"); localStorage.setItem("pcHost",NUBE.host); }catch(e){}
+  history.replaceState(null,"",location.pathname+location.search); })();
+function miniaturaNube(r,tam){ return "https://"+NUBE.host+"/getthumb?"+NUBE.param+"="+encodeURIComponent(NUBE.auth)+"&path="+encodeURIComponent(NUBE.raiz+r)+"&size="+tam+"&crop=0&type=jpeg"; }
 const ORIGEN = MODO==="pc" ? {
   nombre:"este PC",
   mini: r => "miniaturas/" + enc(r),
@@ -256,7 +301,7 @@ const ORIGEN = MODO==="pc" ? {
 const $ = id => document.getElementById(id);
 
 function api(metodo, params){
-  const cuerpo=new URLSearchParams(params||{}); if(NUBE.auth && !cuerpo.has("auth")) cuerpo.set("auth",NUBE.auth);
+  const cuerpo=new URLSearchParams(params||{}); if(NUBE.auth && !cuerpo.has("auth") && !cuerpo.has("access_token")) cuerpo.set(NUBE.param,NUBE.auth);
   return fetch("https://"+NUBE.host+"/"+metodo,{method:"POST",body:cuerpo})
     .then(r=>r.json()).then(j=>{ if(j.result!==0){ const e=new Error(j.error||("código "+j.result)); e.codigo=j.result; e.datos=j; throw e; } return j; });
 }
@@ -264,7 +309,7 @@ function cargaScript(url){ return new Promise((ok,mal)=>{ const s=document.creat
 function msgEntrada(t){ $("eMsg").textContent=t||""; }
 let tfaToken=null;
 function pideEntrada(t){ $("cargandoIdx").style.display="none"; $("entrada").classList.add("on"); msgEntrada(t); setTimeout(()=>$("eMail").focus(),50); }
-function guardaLlave(auth){ NUBE.auth=auth; try{ localStorage.setItem("pcAuth",auth); localStorage.setItem("pcHost",NUBE.host); }catch(e){} }
+function guardaLlave(auth){ NUBE.auth=auth; NUBE.param="auth"; try{ localStorage.setItem("pcAuth",auth); localStorage.setItem("pcParam","auth"); localStorage.setItem("pcHost",NUBE.host); }catch(e){} }
 async function entrar(ev){
   ev.preventDefault(); $("eBtn").disabled=true; msgEntrada("Entrando…");
   const email=$("eMail").value.trim(), pass=$("ePass").value, codigo=$("eCode").value.trim();
@@ -298,12 +343,13 @@ async function arrancaNube(){
     $("bSalir").style.display="";
     iniciar(window.INDICE);
   }catch(e){
-    if(e.codigo===1000||e.codigo===2000||e.codigo===2094||e.codigo===2095){ try{localStorage.removeItem("pcAuth");}catch(_){} NUBE.auth=""; pideEntrada("La sesión ha caducado. Vuelve a entrar."); }
+    if(e.codigo===1000||e.codigo===2000||e.codigo===2094||e.codigo===2095){ try{localStorage.removeItem("pcAuth");localStorage.removeItem("pcParam");}catch(_){} NUBE.auth=""; NUBE.param="auth"; pideEntrada("El acceso a pCloud ya no vale. Vuelve a pasarlo desde el PC con «Pasar acceso al móvil.bat»."); }
     else if(e instanceof TypeError) pideEntrada("No se pudo hablar con pCloud ("+e.message+").");
     else { $("cargandoIdx").textContent="No se pudo cargar el índice: "+e.message; }
   }
 }
-$("bSalir").onclick=()=>{ api("logout").catch(()=>{}); try{ localStorage.removeItem("pcAuth"); }catch(e){} location.reload(); };
+// Salir solo borra el acceso de ESTE móvil. Con el acceso de rclone no se llama a «logout»: lo anularía también en el PC.
+$("bSalir").onclick=()=>{ if(NUBE.param==="auth") api("logout").catch(()=>{}); try{ localStorage.removeItem("pcAuth"); localStorage.removeItem("pcParam"); }catch(e){} location.reload(); };
 $("fEntrada").addEventListener("submit", entrar);
 
 if(MODO==="pc"){
@@ -571,6 +617,10 @@ function pintaMapa(encuadra){
 }
 
 /* ============ PERSONAS ============ */
+function repDe(i){
+  const fs=(fotosDePersona.get(i)||[]).filter(f=>!f.video);
+  return fs.find(f=>f.est===5 && f.pers.length===1) || fs.find(f=>f.pers.length===1) || fs[0];
+}
 function pintaPersonas(){
   const c=$("personas"); c.innerHTML="";
   const grupos=new Map();
@@ -593,19 +643,162 @@ function pintaPersonas(){
 }
 
 function marcaPersonas(){
-  document.querySelectorAll(".persona").forEach(b=>b.classList.toggle("sel", E.personas.has(+b.dataset.p)));
-  const n=E.personas.size, enP=document.querySelector("#vPersonas.activa");
+  document.querySelectorAll(".persona,.fper").forEach(b=>b.classList.toggle("sel", E.personas.has(+b.dataset.p)));
+  const n=E.personas.size, enP=document.querySelector("#vPersonas.activa,#vFamilia.activa");
   $("barraSel").classList.toggle("on", !!(n && enP));
   if(n) $("selTxt").textContent=[...E.personas].map(p=>PERS[p].nombre).join(", ")+" · "+visibles.length.toLocaleString("es-ES")+" fotos";
 }
 $("selLimpia").onclick=()=>{ E.personas.clear(); aplicar(); };
 $("selVer").onclick=()=>{ E.ano=""; $("fAno").value=""; aplicar(); cambia("vFotos"); window.scrollTo(0,0); };
 
+/* ============ FAMILIA ============ */
+function pintaFamilia(){
+  const c=$("familia"); c.innerHTML="";
+  const F=D.familia;
+  if(!F){ c.innerHTML='<div class="vacio">Todavía no hay árbol familiar en el índice.</div>'; return; }
+  const idx0=new Map(PERS.map(p=>[p.ruta,p.i]));
+  // si una etiqueta cambia de rama en digiKam, se encuentra igual por el nombre (si es único)
+  const porNombre=new Map(); PERS.forEach(p=>{ const k=p.ruta.split("/").pop(); porNombre.set(k, porNombre.has(k)?-1:p.i); });
+  const idx={ get:r=>{ if(idx0.has(r)) return idx0.get(r); const k=porNombre.get(String(r).split("/").pop()); return (k==null||k<0)?undefined:k; } };
+  const resuelve=r=>{ const i=idx.get(r); return i==null? r : PERS[i].ruta; };
+  const enArbol=new Set();
+  const rel=F.parentesco||{};
+  const limpio=n=>n.replace(/^(primo|prima|tío|tía|tio|tia|abuelo|abuela)\s+/i,"");
+  function tarjeta(ruta, peq){
+    if(ruta.startsWith("nombre:")){ // persona sin etiqueta (sin fotos)
+      const [nom,r]=ruta.slice(7).split("|");
+      const b=document.createElement("div"); b.className="fper libre"+(peq?" peq":"");
+      b.innerHTML='<div class="cara"></div><div class="nom"></div><div class="rel"></div>';
+      b.querySelector(".cara").textContent=nom.charAt(0);
+      b.querySelector(".nom").textContent=nom;
+      b.querySelector(".rel").textContent=(r?r+" · ":"")+"sin fotos etiquetadas";
+      return b;
+    }
+    const i=idx.get(ruta); if(i==null) return null;
+    enArbol.add(PERS[i].ruta);
+    const p=PERS[i], n=(fotosDePersona.get(i)||[]).length, r=repDe(i);
+    if(!rel[p.ruta] && rel[ruta]) rel[p.ruta]=rel[ruta];
+    ruta=p.ruta;
+    const b=document.createElement("button"); b.className="fper"+(peq?" peq":""); b.dataset.p=i;
+    b.innerHTML='<div class="cara"></div><div class="nom"></div><div class="rel"></div>';
+    if(r) b.querySelector(".cara").style.backgroundImage="url('"+ORIGEN.mini(r.ruta).replace(/'/g,"%27")+"')";
+    b.querySelector(".nom").textContent=(F.mostrar||{})[p.ruta]||limpio(p.nombre);
+    b.querySelector(".rel").textContent=(rel[ruta]? rel[ruta]+" · " : "")+n.toLocaleString("es-ES")+(n===1?" foto":" fotos");
+    b.title=p.nombre+(rel[ruta]?" — "+rel[ruta]:"");
+    b.onclick=()=>{ if(E.personas.has(i)) E.personas.delete(i); else E.personas.add(i); aplicar(); };
+    return b;
+  }
+  // 1. el árbol del núcleo
+  const lados=document.createElement("div"); lados.className="lados"; c.appendChild(lados);
+  const nGen=Math.max(0,...(F.arbol||[]).map(L=>(L.generaciones||[]).length));
+  lados.style.setProperty("--filas", nGen+1);
+  (F.arbol||[]).forEach((L,li)=>{
+    const lado=document.createElement("div"); lado.className="lado";
+    const h=document.createElement("h3"); h.textContent=L.titulo; lado.appendChild(h);
+    const gens=(L.generaciones||[]).slice(); while(gens.length<nGen) gens.push([]);
+    gens.forEach((g,gi)=>{
+      const fila=document.createElement("div"); fila.className="gen"+(g.length?"":" vacia")+(gi>0&&!gens[gi-1].length?" tras-vacia":"");
+      if(g.some(u=>u.grande)) fila.classList.add(li===0?"alDer":"alIzq");
+      g.forEach(u=>{
+        const un=document.createElement("div"); un.className="unidad";
+        const caja=document.createElement("div"); caja.className="pareja";
+        const lista=u.pareja||u.grupo||[];
+        lista.forEach((ruta,k)=>{
+          if(k>0 && u.pareja){ const y=document.createElement("span"); y.className="y"; y.textContent="♥"; caja.appendChild(y); }
+          const t=tarjeta(ruta); if(t){ if(u.grande) t.classList.add("grande"); caja.appendChild(t); }
+        });
+        un.appendChild(caja);
+        if((u.hijos||[]).length){
+          const hj=document.createElement("div"); hj.className="hijos";
+          u.hijos.forEach(x=>{ const t=tarjeta(x); if(t) hj.appendChild(t); });
+          un.appendChild(hj);
+        }
+        if(u.nota){ const no=document.createElement("div"); no.className="nota"; no.textContent=u.nota; un.appendChild(no); }
+        fila.appendChild(un);
+      });
+      lado.appendChild(fila);
+    });
+    lados.appendChild(lado);
+  });
+  // 2. las ramas, ordenadas solas por la etiqueta
+  const tipo=n=>{ const w=norm(n.split(" ")[0]); if(w==="abuelo"||w==="abuela") return "Abuelos"; if(w==="tio"||w==="tia") return "Tíos"; if(w==="primo"||w==="prima") return "Primos"; return "Otros"; };
+  const ramas=(F.ramas||[]).slice();
+  const conocidas=new Set(ramas.map(r=>r[0]));
+  [...new Set(PERS.filter(p=>p.ruta.startsWith("Familia/")).map(p=>p.ruta.split("/")[1]))].forEach(r=>{ if(!conocidas.has(r)) ramas.push([r,"Familia "+r]); });
+  function pintaNodo(n){
+    const caja=document.createElement("div"); caja.className="fam";
+    const par=document.createElement("div"); par.className="pareja";
+    (n.pareja||[]).forEach((ruta,k)=>{
+      if(k>0){ const y=document.createElement("span"); y.className="y"; y.textContent="♥"; par.appendChild(y); }
+      const t=tarjeta(ruta,true); if(t) par.appendChild(t);
+    });
+    caja.appendChild(par);
+    if((n.hijos||[]).length){
+      const hj=document.createElement("div"); hj.className="hijos";
+      n.hijos.forEach(h=>{ if(typeof h==="string"){ const t=tarjeta(h,true); if(t) hj.appendChild(t); } else hj.appendChild(pintaNodo(h)); });
+      caja.appendChild(hj);
+    }
+    return caja;
+  }
+  // quien esté en cualquier árbol no se repite en las listas de «Otros» (p. ej. Isabel, etiquetada en Pérez y colocada en Pardillo)
+  const enAlgunArbol=new Set();
+  (function junta(ns){ (ns||[]).forEach(n=>{ if(typeof n==="string"){ enAlgunArbol.add(resuelve(n)); return; } (n.pareja||[]).forEach(x=>enAlgunArbol.add(resuelve(x))); junta(n.hijos); }); })(Object.values(F.descendencia||{}).flat());
+  ramas.forEach(([clave,titulo])=>{
+    const desc=(F.descendencia||{})[clave];
+    const sec=document.createElement("div"); sec.className="rama";
+    const h=document.createElement("h3"); h.textContent=titulo+" ("+clave+")"; sec.appendChild(h);
+    if(desc && desc.length){
+      const ar=document.createElement("div"); ar.className="arbolRama";
+      desc.forEach(n=>{ const b=document.createElement("div"); b.className="fam1"; b.appendChild(pintaNodo(n)); ar.appendChild(b); });
+      sec.appendChild(ar);
+    }
+    const gente=PERS.filter(p=>p.ruta.startsWith("Familia/"+clave+"/") && !enArbol.has(p.ruta) && !enAlgunArbol.has(p.ruta));
+    if(!gente.length && !(desc&&desc.length)) return;
+    ["Abuelos","Tíos","Primos","Otros"].forEach(t=>{
+      const g=gente.filter(p=>((F.categoria||{})[p.ruta]||tipo(p.nombre))===t).sort((a,b)=>(fotosDePersona.get(b.i)||[]).length-(fotosDePersona.get(a.i)||[]).length);
+      if(!g.length) return;
+      const h4=document.createElement("h4"); h4.textContent=t+" · "+g.length; sec.appendChild(h4);
+      const l=document.createElement("div"); l.className="lista";
+      g.forEach(p=>{ const tj=tarjeta(p.ruta,true); if(tj) l.appendChild(tj); });
+      sec.appendChild(l);
+    });
+    c.appendChild(sec);
+  });
+  // 3. mascotas
+  const masc=PERS.filter(p=>p.ruta.startsWith("Mascotas/"));
+  if(masc.length){
+    const sec=document.createElement("div"); sec.className="rama";
+    sec.innerHTML='<h3>Mascotas</h3><div class="lista"></div>';
+    masc.forEach(p=>{ const tj=tarjeta(p.ruta,true); if(tj) sec.querySelector(".lista").appendChild(tj); });
+    c.appendChild(sec);
+  }
+  marcaPersonas();
+  requestAnimationFrame(ajustaPadres);
+}
+// la caja de los padres se ensancha hasta cubrir a todos sus hijos (de Helena a Carlos, de Susana a Belén)
+function ajustaPadres(){
+  document.querySelectorAll(".lados .gen.alDer, .lados .gen.alIzq").forEach(f=>{
+    const prev=f.previousElementSibling; if(!prev||!prev.classList.contains("gen")) return;
+    const un=prev.querySelector(".unidad"), caja=un&&un.querySelector(".pareja"); if(!caja) return;
+    un.style.marginLeft=""; caja.style.width=""; caja.style.justifyContent=""; prev.style.justifyContent="";
+    const R=prev.getBoundingClientRect(); if(!R.width || window.innerWidth<=820) return;
+    let a=Infinity,b=-Infinity;
+    f.querySelectorAll(".unidad>.pareja, .unidad>.hijos").forEach(e=>{ const q=e.getBoundingClientRect(); a=Math.min(a,q.left); b=Math.max(b,q.right); });
+    if(!isFinite(a)) return;
+    prev.style.justifyContent="flex-start";
+    const der=f.classList.contains("alDer"); if(der) b-=5; else a+=5; // un hueco entre las dos familias
+    un.style.marginLeft=(a-R.left)+"px";
+    caja.style.boxSizing="border-box"; caja.style.width=(b-a)+"px"; caja.style.justifyContent="space-around";
+  });
+}
+addEventListener("resize",()=>{ if($("familia").children.length) ajustaPadres(); });
+
 /* ============ PESTAÑAS ============ */
 function cambia(v){
   document.querySelectorAll(".vista").forEach(s=>s.classList.toggle("activa", s.id===v));
   document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on", b.dataset.v===v));
-  $("filtros").style.display = v==="vPersonas" ? "none" : "";
+  $("filtros").style.display = (v==="vPersonas"||v==="vFamilia") ? "none" : "";
+  if(v==="vFamilia" && !$("familia").children.length) pintaFamilia();
   if(v==="vMapa") setTimeout(iniciaMapa,30);
   if(v==="vPersonas" && !$("personas").children.length) pintaPersonas();
   marcaPersonas();
