@@ -268,13 +268,14 @@ async function entrar(ev){
       try{ NUBE.auth=""; j=await api("userinfo",datos); }
       catch(e){
         if(e.codigo===2297 && e.datos && e.datos.token){ tfaToken=e.datos.token; $("eCode").style.display=""; $("eCode").focus(); msgEntrada("pCloud pide el código de verificación. Escríbelo y pulsa Entrar."); $("eBtn").disabled=false; return; }
-        if(NUBE.host==="eapi.pcloud.com"){ NUBE.host="api.pcloud.com"; j=await api("userinfo",datos); } else throw e;
+        // 2321 = la cuenta está en el otro centro de datos (EE. UU.). Cualquier otro error es el de verdad.
+        if(e.codigo===2321 && NUBE.host==="eapi.pcloud.com"){ NUBE.host="api.pcloud.com"; j=await api("userinfo",datos); } else throw e;
       }
     }
     guardaLlave(j.auth); $("ePass").value=""; $("entrada").classList.remove("on"); arrancaNube();
   }catch(e){
     if(e instanceof TypeError) msgEntrada("No se pudo hablar con pCloud desde esta página ("+e.message+"). Avisa a Claude: hay que usar la otra vía de acceso.");
-    else msgEntrada("pCloud no ha aceptado la entrada: "+e.message);
+    else msgEntrada("pCloud no ha aceptado la entrada: "+e.message+" (código "+(e.codigo||"?")+", servidor "+NUBE.host+")");
     NUBE.host="eapi.pcloud.com";
   }finally{ $("eBtn").disabled=false; }
 }
