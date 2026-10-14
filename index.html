@@ -150,8 +150,15 @@ nav button.on{color:var(--verde)}
 #lb .top .t{flex:1;font-size:13.5px;line-height:1.3;min-width:0}
 #lb .top .t b{display:block;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #lb .btn{background:rgba(255,255,255,.12);border:0;border-radius:10px;padding:8px 11px;cursor:pointer;color:#fff}
-#lb .foto{flex:1;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:pan-y}
-#lb .foto img,#lb .foto video{max-width:100%;max-height:100%;object-fit:contain}
+#lb .foto{flex:1;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none;cursor:zoom-in}
+#lb .foto.zoom{cursor:grab}
+#lb .foto.zoom.arrastra{cursor:grabbing}
+#lb .lienzo{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;transform-origin:50% 50%;will-change:transform}
+#lb .lienzo.suave{transition:transform .18s ease-out}
+#lb .nav{z-index:3}
+#lb .zoomBtns{display:inline-flex;gap:4px}
+@media (max-width:520px){#lb .zoomBtns{display:none}}
+#lb .foto img,#lb .foto video{max-width:100%;max-height:100%;object-fit:contain;user-select:none;-webkit-user-drag:none}
 #lb .foto .baja{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:blur(1.5px)}
 #lb .foto img:not(.baja){position:relative;z-index:1;transition:opacity .2s}
 #lb .nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.35);border:0;color:#fff;font-size:28px;width:44px;height:64px;cursor:pointer;border-radius:8px}
@@ -211,6 +218,7 @@ nav button.on{color:var(--verde)}
 <div id="lb" role="dialog" aria-modal="true">
   <div class="top">
     <div class="t" id="lbTit"></div>
+    <span class="zoomBtns"><button class="btn" id="lbMenos" title="Alejar (tecla −)">−</button><button class="btn" id="lbMas" title="Acercar (tecla +)">＋</button><button class="btn" id="lbAjusta" title="Ajustar a la pantalla (tecla 0)">⤢</button></span>
     <button class="btn" id="lbMapa" title="Ver en el mapa">Mapa</button>
     <button class="btn" id="lbCerrar" title="Cerrar">✕</button>
   </div>
@@ -265,8 +273,10 @@ async function entrar(ev){
     if(tfaToken && codigo){ j=await api("tfa_login",{token:tfaToken, code:codigo, trustdevice:1}); }
     else{
       const datos={getauth:1, logout:1, username:email, password:pass, device:"Visor Catalogo Fotos"};
+      if(codigo) datos.code=codigo;
       try{ NUBE.auth=""; j=await api("userinfo",datos); }
       catch(e){
+        if(e.codigo===1022){ $("eCode").style.display=""; $("eCode").value=""; $("eCode").focus(); msgEntrada("pCloud pide un código de verificación (mira tu correo; si usas verificación en dos pasos, la app o el SMS). Escríbelo y pulsa Entrar."); $("eBtn").disabled=false; return; }
         if(e.codigo===2297 && e.datos && e.datos.token){ tfaToken=e.datos.token; $("eCode").style.display=""; $("eCode").focus(); msgEntrada("pCloud pide el código de verificación. Escríbelo y pulsa Entrar."); $("eBtn").disabled=false; return; }
         // 2321 = la cuenta está en el otro centro de datos (EE. UU.). Cualquier otro error es el de verdad.
         if(e.codigo===2321 && NUBE.host==="eapi.pcloud.com"){ NUBE.host="api.pcloud.com"; j=await api("userinfo",datos); } else throw e;
@@ -604,24 +614,27 @@ function cambia(v){
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>cambia(b.dataset.v));
 
 /* ============ FOTO A PANTALLA COMPLETA ============ */
-let lbLista=[], lbK=0;
+let lbLista=[], lbK=0; const Z={s:1,x:0,y:0};
 function abre(k, lista){ lbLista=lista; lbK=k; $("lb").classList.add("on"); muestra(); }
-function cierra(){ $("lb").classList.remove("on"); const z=$("lbFoto"); z.querySelectorAll("img,video,.cargando").forEach(e=>e.remove()); }
+function cierra(){ $("lb").classList.remove("on"); const z=$("lbFoto"); z.querySelectorAll(".lienzo,video,.cargando").forEach(e=>e.remove()); }
 function fechaLarga(f){ if(!f) return "Sin fecha"; const d=new Date(f); if(isNaN(d)) return f; return d.toLocaleDateString("es-ES",{weekday:"short",day:"numeric",month:"long",year:"numeric"})+(f.slice(11,16)!=="00:00"?" · "+f.slice(11,16):""); }
 function muestra(){
   const f=lbLista[lbK]; if(!f) return;
-  const z=$("lbFoto"); z.querySelectorAll("img,video,.cargando").forEach(e=>e.remove());
+  const zona=$("lbFoto"); zona.querySelectorAll(".lienzo,video,.cargando").forEach(e=>e.remove());
+  Z.s=1; Z.x=0; Z.y=0;
+  const z=document.createElement("div"); z.className="lienzo"; zona.appendChild(z); aplicaZ();
   $("lbTit").innerHTML="<b></b><span></span>";
   $("lbTit").querySelector("b").textContent=f.evento;
   $("lbTit").querySelector("span").textContent=fechaLarga(f.fecha)+"  ·  "+(lbK+1)+" de "+lbLista.length;
   $("lbMapa").style.display = f.lat!=null ? "" : "none";
   if(f.video){
-    const v=document.createElement("video"); v.controls=true; z.appendChild(v);
-    const c=document.createElement("div"); c.className="cargando"; c.textContent="cargando vídeo…"; z.appendChild(c);
+    z.remove();
+    const v=document.createElement("video"); v.controls=true; zona.appendChild(v);
+    const c=document.createElement("div"); c.className="cargando"; c.textContent="cargando vídeo…"; zona.appendChild(c);
     ORIGEN.video(f.ruta).then(u=>{ v.src=u; c.remove(); }).catch(e=>{ c.textContent="no se pudo abrir el vídeo"; });
   }else{
     const baja=new Image(); baja.className="baja"; baja.src=ORIGEN.mini(f.ruta); z.appendChild(baja);
-    const c=document.createElement("div"); c.className="cargando"; c.textContent="cargando original…"; z.appendChild(c);
+    const c=document.createElement("div"); c.className="cargando"; c.textContent="cargando original…"; zona.appendChild(c);
     const alta=new Image(); alta.style.opacity=0;
     alta.onload=()=>{ alta.style.opacity=1; baja.remove(); c.remove(); };
     alta.onerror=()=>{ c.textContent="no se pudo abrir el original"; };
@@ -639,9 +652,94 @@ function muestra(){
 function paso(d){ const n=lbK+d; if(n>=0 && n<lbLista.length){ lbK=n; muestra(); } }
 $("lbAnt").onclick=()=>paso(-1); $("lbSig").onclick=()=>paso(1); $("lbCerrar").onclick=cierra;
 $("lbMapa").onclick=()=>{ const f=lbLista[lbK]; cierra(); cambia("vMapa"); setTimeout(()=>{ if(mapa) mapa.setView([f.lat,f.lon],16); },120); };
-document.addEventListener("keydown",e=>{ if(!$("lb").classList.contains("on")) return; if(e.key==="Escape") cierra(); if(e.key==="ArrowLeft") paso(-1); if(e.key==="ArrowRight") paso(1); });
-let x0=null; $("lbFoto").addEventListener("touchstart",e=>{x0=e.touches[0].clientX;},{passive:true});
-$("lbFoto").addEventListener("touchend",e=>{ if(x0==null) return; const dx=e.changedTouches[0].clientX-x0; if(Math.abs(dx)>50) paso(dx<0?1:-1); x0=null; });
+document.addEventListener("keydown",e=>{ if(!$("lb").classList.contains("on")) return;
+  if(e.key==="Escape") cierra();
+  if(e.key==="ArrowLeft" && Z.s===1) paso(-1);
+  if(e.key==="ArrowRight" && Z.s===1) paso(1);
+  if(e.key==="+"||e.key==="=") zoomEn(1.5,0,0,true);
+  if(e.key==="-") zoomEn(1/1.5,0,0,true);
+  if(e.key==="0") ajusta();
+});
+
+/* --- zoom y desplazamiento de la foto grande --- */
+function aplicaZ(suave){
+  const l=$("lbFoto").querySelector(".lienzo"); if(!l) return;
+  limitaZ();
+  l.classList.toggle("suave",!!suave);
+  l.style.transform="translate("+Z.x+"px,"+Z.y+"px) scale("+Z.s+")";
+  $("lbFoto").classList.toggle("zoom",Z.s>1.01);
+}
+function limitaZ(){ // que la foto no se vaya fuera de la pantalla
+  const r=$("lbFoto").getBoundingClientRect();
+  const mx=r.width*(Z.s-1)/2, my=r.height*(Z.s-1)/2;
+  Z.x=Math.max(-mx,Math.min(mx,Z.x)); Z.y=Math.max(-my,Math.min(my,Z.y));
+}
+function zoomEn(f,cx,cy,suave){ // cx,cy: punto respecto al centro de la zona
+  const ns=Math.min(8,Math.max(1,Z.s*f)), k=ns/Z.s;
+  Z.x=cx-(cx-Z.x)*k; Z.y=cy-(cy-Z.y)*k; Z.s=ns;
+  if(Z.s<=1.01){ Z.s=1; Z.x=0; Z.y=0; }
+  aplicaZ(suave);
+}
+function ajusta(){ Z.s=1; Z.x=0; Z.y=0; aplicaZ(true); }
+function relCentro(x,y){ const r=$("lbFoto").getBoundingClientRect(); return [x-r.left-r.width/2, y-r.top-r.height/2]; }
+$("lbMas").onclick=()=>zoomEn(1.5,0,0,true);
+$("lbMenos").onclick=()=>zoomEn(1/1.5,0,0,true);
+$("lbAjusta").onclick=ajusta;
+const zonaFoto=$("lbFoto");
+zonaFoto.addEventListener("wheel",e=>{ if(!zonaFoto.querySelector(".lienzo")) return; e.preventDefault(); const [cx,cy]=relCentro(e.clientX,e.clientY); zoomEn(e.deltaY<0?1.2:1/1.2,cx,cy); },{passive:false});
+let ultimoTipo="mouse";
+zonaFoto.addEventListener("pointerdown",e=>{ ultimoTipo=e.pointerType; },true);
+zonaFoto.addEventListener("dblclick",e=>{ if(e.target.closest(".nav")||ultimoTipo==="touch") return; const [cx,cy]=relCentro(e.clientX,e.clientY); if(Z.s>1.01) ajusta(); else zoomEn(2.5,cx,cy,true); });
+// punteros: ratón y dedos
+const dedos=new Map(); let gesto=null, ultimoToque=null;
+zonaFoto.addEventListener("pointerdown",e=>{
+  if(e.target.closest(".nav")||!zonaFoto.querySelector(".lienzo")) return;
+  zonaFoto.setPointerCapture(e.pointerId);
+  dedos.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(dedos.size===1){
+    gesto={tipo:"uno", x0:e.clientX, y0:e.clientY, zx:Z.x, zy:Z.y, t0:Date.now(), toque:e.pointerType==="touch"};
+    if(Z.s>1.01) zonaFoto.classList.add("arrastra");
+  }else if(dedos.size===2){
+    const [a,b]=[...dedos.values()];
+    const [mx,my]=relCentro((a.x+b.x)/2,(a.y+b.y)/2);
+    gesto={tipo:"pinza", d0:Math.hypot(a.x-b.x,a.y-b.y), s0:Z.s, zx:Z.x, zy:Z.y, mx, my};
+  }
+});
+zonaFoto.addEventListener("pointermove",e=>{
+  if(!dedos.has(e.pointerId)||!gesto) return;
+  dedos.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(gesto.tipo==="uno" && Z.s>1.01){
+    Z.x=gesto.zx+(e.clientX-gesto.x0); Z.y=gesto.zy+(e.clientY-gesto.y0); aplicaZ();
+  }else if(gesto.tipo==="pinza" && dedos.size===2){
+    const [a,b]=[...dedos.values()];
+    const ns=Math.min(8,Math.max(1,gesto.s0*Math.hypot(a.x-b.x,a.y-b.y)/gesto.d0)), k=ns/gesto.s0;
+    const [mx,my]=relCentro((a.x+b.x)/2,(a.y+b.y)/2);
+    Z.s=ns; Z.x=mx-(gesto.mx-gesto.zx)*k; Z.y=my-(gesto.my-gesto.zy)*k;
+    if(Z.s<=1.01){ Z.s=1; Z.x=0; Z.y=0; }
+    aplicaZ();
+  }
+});
+function sueltaDedo(e){
+  if(!dedos.has(e.pointerId)) return;
+  const g=gesto; dedos.delete(e.pointerId); zonaFoto.classList.remove("arrastra");
+  // doble toque (móvil): dos toques cortos, quietos y en el mismo sitio
+  if(g && g.tipo==="uno" && g.toque && dedos.size===0 && Date.now()-g.t0<250 && Math.hypot(e.clientX-g.x0,e.clientY-g.y0)<12){
+    const ahora=Date.now();
+    if(ultimoToque && ahora-ultimoToque.t<320 && Math.hypot(e.clientX-ultimoToque.x,e.clientY-ultimoToque.y)<40){
+      const [cx,cy]=relCentro(e.clientX,e.clientY); if(Z.s>1.01) ajusta(); else zoomEn(2.5,cx,cy,true); ultimoToque=0; gesto=null; return;
+    }
+    ultimoToque={t:ahora,x:e.clientX,y:e.clientY};
+  }
+  // deslizar sin zoom = foto siguiente / anterior
+  if(g && g.tipo==="uno" && Z.s===1 && dedos.size===0){
+    const dx=e.clientX-g.x0, dy=e.clientY-g.y0;
+    if(Math.abs(dx)>60 && Math.abs(dx)>Math.abs(dy)*1.5) paso(dx<0?1:-1);
+  }
+  if(dedos.size===1){ const [p]=[...dedos.values()]; gesto={tipo:"uno", x0:p.x, y0:p.y, zx:Z.x, zy:Z.y}; }
+  else if(dedos.size===0) gesto=null;
+}
+zonaFoto.addEventListener("pointerup",sueltaDedo);
+zonaFoto.addEventListener("pointercancel",sueltaDedo);
 
 /* ============ ARRANQUE ============ */
 recupera();
