@@ -1,0 +1,652 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2f6b47">
+<title>Catálogo de Fotos</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.min.css">
+<style>
+:root{
+  --verde:#2f6b47; --verde2:#3f8a5d; --verde-claro:#e6f0ea;
+  --fondo:#f6f4ef; --papel:#ffffff; --tinta:#1f2a24; --gris:#6b736e; --linea:#e2ded5;
+  --dorado:#c99a2e; --sombra:0 1px 3px rgba(0,0,0,.08),0 4px 14px rgba(0,0,0,.06);
+  --barra:62px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --fondo:#151a17; --papel:#1e2521; --tinta:#e8ece9; --gris:#9aa49e; --linea:#2c3530;
+    --verde-claro:#23342a; --sombra:0 1px 3px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  --fondo:#151a17; --papel:#1e2521; --tinta:#e8ece9; --gris:#9aa49e; --linea:#2c3530;
+  --verde-claro:#23342a; --sombra:0 1px 3px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--fondo);color:var(--tinta);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit}
+header{position:sticky;top:0;z-index:20;background:var(--verde);color:#fff;padding:10px 16px calc(10px) 16px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+header h1{font-size:17px;margin:0;font-weight:650;letter-spacing:.2px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header .cuenta{font-size:12.5px;opacity:.85;white-space:nowrap}
+main{padding-bottom:calc(var(--barra) + env(safe-area-inset-bottom))}
+.vista{display:none}
+.vista.activa{display:block}
+
+/* Filtros */
+.filtros{position:sticky;top:44px;z-index:15;background:var(--fondo);padding:10px 16px 8px;border-bottom:1px solid var(--linea);display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.filtros select,.filtros input[type=search],.filtros #fAdd{background:var(--papel);color:var(--tinta);border:1px solid var(--linea);border-radius:10px;padding:7px 10px;font:inherit;min-width:0}
+.filtros input[type=search]{flex:1 1 160px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--verde-claro);color:var(--verde);border:1px solid transparent;border-radius:999px;padding:5px 10px;font-size:13.5px;cursor:pointer;white-space:nowrap}
+.chip.on{background:var(--verde);color:#fff}
+.chip .x{font-weight:700;opacity:.8}
+.toggle{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;color:var(--gris);cursor:pointer;user-select:none}
+.toggle input{accent-color:var(--verde)}
+.resumen{width:100%;font-size:12.5px;color:var(--gris)}
+
+/* Rejilla */
+.mes{padding:4px 12px 2px}
+.mes h2{font-size:15px;margin:14px 4px 2px;font-weight:650}
+.mes .sub{font-size:12.5px;color:var(--gris);margin:0 4px 8px}
+.rejilla{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--celda,112px),1fr));gap:4px}
+.celda{position:relative;aspect-ratio:1;background:var(--linea);border-radius:6px;overflow:hidden;cursor:pointer;border:0;padding:0}
+.celda img{width:100%;height:100%;object-fit:cover;display:block;transition:opacity .25s}
+.celda .est{position:absolute;right:4px;bottom:3px;font-size:12px;color:#ffd970;text-shadow:0 0 3px rgba(0,0,0,.8)}
+.celda .vid{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#2b332e;color:#cfd8d2;font-size:12px;flex-direction:column;gap:4px}
+.celda .vid b{font-size:26px;line-height:1}
+.centinela{height:40px}
+.vacio{padding:40px 20px;text-align:center;color:var(--gris)}
+
+/* Mapa */
+#mapaZona{display:flex;height:calc(100vh - 44px - var(--barra) - env(safe-area-inset-bottom) - var(--hfiltros,52px));min-height:360px}
+#mapa{flex:1;min-width:0;min-height:0;isolation:isolate;position:relative}
+#panel{width:440px;flex:0 0 440px;overflow-y:auto;background:var(--fondo);border-left:1px solid var(--linea);padding:8px 10px 16px}
+#panel .ph{font-size:13px;color:var(--gris);margin:2px 2px 8px;line-height:1.35}
+#panel .ph b{color:var(--tinta);font-size:14px}
+#panel .rejilla{grid-template-columns:repeat(auto-fill,minmax(var(--celdaP,96px),1fr));gap:3px}
+#panel .cab{display:flex;align-items:flex-start;gap:8px}
+#panel .ph{flex:1}
+.tam{display:inline-flex;border:1px solid var(--linea);border-radius:8px;overflow:hidden;flex:0 0 auto}
+.tam button{background:var(--papel);border:0;width:30px;height:28px;cursor:pointer;font-size:16px;color:var(--tinta)}
+.tam button+button{border-left:1px solid var(--linea)}
+@media (max-width:799px){
+  #mapaZona{flex-direction:column}
+  #mapa{flex:0 0 56%}
+  #panel{width:auto;flex:1 1 auto;border-left:0;border-top:1px solid var(--linea)}
+}
+.pin{width:44px;height:44px;border-radius:8px;border:2px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.4);background-size:cover;background-position:center;background-color:#ccc}
+.pila{position:relative;width:58px;height:58px}
+.pila i{position:absolute;inset:0;border-radius:8px;border:2px solid #fff;background:#ccc center/cover no-repeat;box-shadow:0 1px 5px rgba(0,0,0,.45)}
+.pila i:nth-child(1){transform:rotate(-9deg) translate(-5px,3px)}
+.pila i:nth-child(2){transform:rotate(7deg) translate(5px,2px)}
+.pila b{position:absolute;right:-8px;top:-8px;background:var(--verde);color:#fff;border-radius:999px;font:600 11.5px/1.5 system-ui,sans-serif;padding:0 6px;border:2px solid #fff;min-width:22px;text-align:center}
+.pila.sel i{border-color:#ffd970}
+#panel .acc{display:flex;gap:6px;margin:0 2px 8px}
+#panel .acc button{font-size:12.5px;padding:5px 10px}
+.leaflet-popup-content{margin:10px}
+.popup{width:220px}
+.popup .mini{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;margin-top:6px}
+.popup .mini img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:4px;cursor:pointer}
+.popup b{display:block;font-size:13px}
+.popup a{color:var(--verde2);font-size:12.5px;cursor:pointer}
+
+.busca{position:absolute;top:10px;left:56px;z-index:1000;width:min(340px,calc(100% - 120px))}
+.busca input{width:100%;background:var(--papel);color:var(--tinta);border:1px solid var(--linea);border-radius:10px;padding:8px 11px;font:inherit;box-shadow:var(--sombra)}
+.busca ul{list-style:none;margin:4px 0 0;padding:4px;background:var(--papel);border-radius:10px;box-shadow:var(--sombra);max-height:300px;overflow:auto}
+.busca ul:empty{display:none}
+.busca li{padding:7px 9px;border-radius:7px;cursor:pointer;font-size:13.5px;line-height:1.3}
+.busca li:hover,.busca li.on{background:var(--verde-claro)}
+.busca li small{display:block;color:var(--gris);font-size:12px}
+.busca li.nota{cursor:default;color:var(--gris)}
+
+/* Personas */
+.personas{padding:10px 12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.persona{background:var(--papel);border-radius:12px;box-shadow:var(--sombra);overflow:hidden;cursor:pointer;border:0;padding:0;text-align:left}
+.persona .cara{aspect-ratio:1.2;background:var(--linea) center/cover no-repeat}
+.persona .txt{padding:8px 10px}
+.persona .nom{font-weight:600;font-size:14px}
+.persona .grp{font-size:12px;color:var(--gris)}
+.grupo-t{grid-column:1/-1;font-size:13px;font-weight:650;color:var(--gris);margin:10px 2px 0;text-transform:uppercase;letter-spacing:.6px}
+
+.modo{display:inline-flex;border:1px solid var(--linea);border-radius:999px;overflow:hidden}
+.modo button{background:var(--papel);border:0;padding:5px 10px;font-size:13px;cursor:pointer;color:var(--gris)}
+.modo button.on{background:var(--verde);color:#fff}
+#fAdd{flex:0 1 170px}
+.persona.sel{outline:3px solid var(--verde);outline-offset:-3px}
+.persona .marca{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.9);border:2px solid var(--verde);display:flex;align-items:center;justify-content:center;color:var(--verde);font-weight:700;font-size:15px}
+.persona{position:relative}
+.persona.sel .marca{background:var(--verde);color:#fff}
+#barraSel{position:fixed;left:0;right:0;bottom:calc(var(--barra) + env(safe-area-inset-bottom));z-index:25;background:var(--papel);border-top:1px solid var(--linea);padding:10px 16px;display:none;align-items:center;gap:10px;box-shadow:0 -4px 12px rgba(0,0,0,.08)}
+#barraSel.on{display:flex}
+#barraSel .t{flex:1;font-size:13.5px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.boton{background:var(--verde);color:#fff;border:0;border-radius:10px;padding:9px 14px;font-weight:600;cursor:pointer}
+.boton.sec{background:var(--verde-claro);color:var(--verde)}
+#vPersonas{padding-bottom:70px}
+.leaflet-control-layers{font:13px system-ui,sans-serif}
+
+#entrada{position:fixed;inset:0;z-index:20000;background:var(--fondo);display:none;align-items:center;justify-content:center;padding:16px}
+#entrada.on{display:flex}
+#entrada form{background:var(--papel);border-radius:16px;box-shadow:var(--sombra);padding:22px;width:min(380px,100%);display:flex;flex-direction:column;gap:10px}
+#entrada h2{margin:0;color:var(--verde)}
+#entrada p{margin:0 0 4px;color:var(--gris);font-size:13.5px}
+#entrada input{background:var(--fondo);color:var(--tinta);border:1px solid var(--linea);border-radius:10px;padding:10px 12px;font:inherit}
+#eMsg{font-size:13px;color:#b3412e;min-height:1em}
+#cargandoIdx{position:fixed;inset:0;z-index:19000;background:var(--fondo);display:flex;align-items:center;justify-content:center}
+.salir{background:rgba(255,255,255,.15);border:0;color:#fff;border-radius:8px;padding:4px 9px;font-size:12.5px;cursor:pointer}
+
+/* Barra inferior */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--papel);border-top:1px solid var(--linea);display:flex;padding-bottom:env(safe-area-inset-bottom);height:calc(var(--barra) + env(safe-area-inset-bottom))}
+nav button{flex:1;background:none;border:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--gris);font-size:12px;cursor:pointer}
+nav button svg{width:24px;height:24px}
+nav button.on{color:var(--verde)}
+
+/* Visor a pantalla completa */
+#lb{position:fixed;inset:0;z-index:10000;background:#0b0d0c;color:#eee;display:none;flex-direction:column}
+#lb.on{display:flex}
+#lb .top{display:flex;align-items:center;gap:8px;padding:10px 12px;padding-top:calc(10px + env(safe-area-inset-top))}
+#lb .top .t{flex:1;font-size:13.5px;line-height:1.3;min-width:0}
+#lb .top .t b{display:block;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#lb .btn{background:rgba(255,255,255,.12);border:0;border-radius:10px;padding:8px 11px;cursor:pointer;color:#fff}
+#lb .foto{flex:1;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:pan-y}
+#lb .foto img,#lb .foto video{max-width:100%;max-height:100%;object-fit:contain}
+#lb .foto .baja{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:blur(1.5px)}
+#lb .foto img:not(.baja){position:relative;z-index:1;transition:opacity .2s}
+#lb .nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.35);border:0;color:#fff;font-size:28px;width:44px;height:64px;cursor:pointer;border-radius:8px}
+#lb .ant{left:6px} #lb .sig{right:6px}
+#lb .pie{padding:10px 14px calc(12px + env(safe-area-inset-bottom));font-size:13.5px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+#lb .pie .chip{background:rgba(255,255,255,.12);color:#fff}
+#lb .cargando{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);font-size:12px;opacity:.7}
+@media (hover:none){#lb .nav{display:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="titulo">Catálogo de Fotos</h1>
+  <span class="cuenta" id="cuenta"></span>
+  <button class="salir" id="bSalir" style="display:none" title="Cerrar la sesión de pCloud en este aparato">Salir</button>
+</header>
+
+<main>
+  <div class="filtros" id="filtros">
+    <select id="fAno" aria-label="Año"><option value="">Todos los años</option></select>
+    <input type="search" id="fTexto" placeholder="Buscar evento o lugar…" aria-label="Buscar">
+    <label class="toggle"><input type="checkbox" id="fCinco"> Solo ★★★★★</label>
+    <input id="fAdd" list="dlPers" placeholder="+ Añadir persona" aria-label="Añadir persona" autocomplete="off">
+    <datalist id="dlPers"></datalist>
+    <span id="fPersonas"></span>
+    <span class="modo" id="fModo" style="display:none"><button data-m="y" class="on" title="Salen todas en la misma foto">Juntas</button><button data-m="o" title="Sale al menos una">Cualquiera</button></span>
+    <span class="tam" id="tamFotos" title="Tamaño de las miniaturas"><button data-d="-1">−</button><button data-d="1">+</button></span>
+    <div class="resumen" id="resumen"></div>
+  </div>
+
+  <section class="vista activa" id="vFotos"><div id="lista"></div><div class="centinela" id="centinela"></div></section>
+  <section class="vista" id="vMapa"><div id="mapaZona"><div id="mapa"><div class="busca" id="busca"><input id="buscaTxt" placeholder="Ir a un lugar o evento…" autocomplete="off" aria-label="Ir a un lugar"><ul id="buscaRes"></ul></div></div><aside id="panel"><div class="cab"><div class="ph" id="panelTit"></div><span class="tam" title="Tamaño de las miniaturas"><button data-d="-1">−</button><button data-d="1">+</button></span></div><div class="rejilla" id="panelRej"></div></aside></div></section>
+  <section class="vista" id="vPersonas"><div class="personas" id="personas"></div></section>
+</main>
+
+<div id="barraSel"><span class="t" id="selTxt"></span><button class="boton sec" id="selLimpia">Limpiar</button><button class="boton" id="selVer">Ver fotos</button></div>
+
+<nav>
+  <button data-v="vFotos" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Fotos</button>
+  <button data-v="vMapa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>Mapa</button>
+  <button data-v="vPersonas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.6"/><path d="M15.5 14.2c3 .2 5.5 2.6 5.5 5.8"/></svg>Personas</button>
+</nav>
+
+<div id="entrada">
+  <form id="fEntrada" autocomplete="on">
+    <h2>Catálogo de Fotos</h2>
+    <p>Entra con tu cuenta de pCloud. La llave se guarda solo en este aparato; tu contraseña no se guarda.</p>
+    <input id="eMail" type="email" placeholder="Correo de pCloud" autocomplete="username" required>
+    <input id="ePass" type="password" placeholder="Contraseña" autocomplete="current-password" required>
+    <input id="eCode" type="text" inputmode="numeric" placeholder="Código de verificación (si te lo pide)" style="display:none" autocomplete="one-time-code">
+    <button class="boton" type="submit" id="eBtn">Entrar</button>
+    <div id="eMsg"></div>
+  </form>
+</div>
+<div id="cargandoIdx" class="vacio" style="display:none">Cargando el índice desde pCloud…</div>
+
+<div id="lb" role="dialog" aria-modal="true">
+  <div class="top">
+    <div class="t" id="lbTit"></div>
+    <button class="btn" id="lbMapa" title="Ver en el mapa">Mapa</button>
+    <button class="btn" id="lbCerrar" title="Cerrar">✕</button>
+  </div>
+  <div class="foto" id="lbFoto">
+    <button class="nav ant" id="lbAnt" aria-label="Anterior">‹</button>
+    <button class="nav sig" id="lbSig" aria-label="Siguiente">›</button>
+  </div>
+  <div class="pie" id="lbPie"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script>
+"use strict";
+/* ============ ORIGEN DE LAS FOTOS ============
+   - Abierta desde el PC (file://): miniaturas en ./miniaturas, originales en C:\Fotos\30_BIBLIOTECA.
+   - Abierta desde internet (GitHub): todo se pide a pCloud con la llave de este aparato. */
+const MODO = location.protocol==="file:" ? "pc" : "nube";
+function enc(r){ return r.split("/").map(encodeURIComponent).join("/"); }
+const NUBE = { host:"eapi.pcloud.com", auth:"", raiz:"/Catalogo Fotos/30_BIBLIOTECA/", indice:"/Catalogo Fotos/visor/indice.js" };
+try{ NUBE.host=localStorage.getItem("pcHost")||NUBE.host; NUBE.auth=localStorage.getItem("pcAuth")||""; }catch(e){}
+function miniaturaNube(r,tam){ return "https://"+NUBE.host+"/getthumb?auth="+encodeURIComponent(NUBE.auth)+"&path="+encodeURIComponent(NUBE.raiz+r)+"&size="+tam+"&crop=0&type=jpeg"; }
+const ORIGEN = MODO==="pc" ? {
+  nombre:"este PC",
+  mini: r => "miniaturas/" + enc(r),
+  grande: r => "../../30_BIBLIOTECA/" + enc(r),
+  video: r => Promise.resolve("../../30_BIBLIOTECA/" + enc(r))
+} : {
+  nombre:"pCloud",
+  mini: r => miniaturaNube(r,"400x400"),
+  grande: r => miniaturaNube(r,"2048x1024"),
+  video: r => api("getfilelink",{path:NUBE.raiz+r}).then(j=>"https://"+j.hosts[0]+j.path)
+};
+const $ = id => document.getElementById(id);
+
+function api(metodo, params){
+  const cuerpo=new URLSearchParams(params||{}); if(NUBE.auth && !cuerpo.has("auth")) cuerpo.set("auth",NUBE.auth);
+  return fetch("https://"+NUBE.host+"/"+metodo,{method:"POST",body:cuerpo})
+    .then(r=>r.json()).then(j=>{ if(j.result!==0){ const e=new Error(j.error||("código "+j.result)); e.codigo=j.result; e.datos=j; throw e; } return j; });
+}
+function cargaScript(url){ return new Promise((ok,mal)=>{ const s=document.createElement("script"); s.src=url; s.onload=ok; s.onerror=()=>mal(new Error("no se pudo descargar "+url)); document.head.appendChild(s); }); }
+function msgEntrada(t){ $("eMsg").textContent=t||""; }
+let tfaToken=null;
+function pideEntrada(t){ $("cargandoIdx").style.display="none"; $("entrada").classList.add("on"); msgEntrada(t); setTimeout(()=>$("eMail").focus(),50); }
+function guardaLlave(auth){ NUBE.auth=auth; try{ localStorage.setItem("pcAuth",auth); localStorage.setItem("pcHost",NUBE.host); }catch(e){} }
+async function entrar(ev){
+  ev.preventDefault(); $("eBtn").disabled=true; msgEntrada("Entrando…");
+  const email=$("eMail").value.trim(), pass=$("ePass").value, codigo=$("eCode").value.trim();
+  try{
+    let j;
+    if(tfaToken && codigo){ j=await api("tfa_login",{token:tfaToken, code:codigo, trustdevice:1}); }
+    else{
+      const datos={getauth:1, logout:1, username:email, password:pass, device:"Visor Catalogo Fotos"};
+      try{ NUBE.auth=""; j=await api("userinfo",datos); }
+      catch(e){
+        if(e.codigo===2297 && e.datos && e.datos.token){ tfaToken=e.datos.token; $("eCode").style.display=""; $("eCode").focus(); msgEntrada("pCloud pide el código de verificación. Escríbelo y pulsa Entrar."); $("eBtn").disabled=false; return; }
+        if(NUBE.host==="eapi.pcloud.com"){ NUBE.host="api.pcloud.com"; j=await api("userinfo",datos); } else throw e;
+      }
+    }
+    guardaLlave(j.auth); $("ePass").value=""; $("entrada").classList.remove("on"); arrancaNube();
+  }catch(e){
+    if(e instanceof TypeError) msgEntrada("No se pudo hablar con pCloud desde esta página ("+e.message+"). Avisa a Claude: hay que usar la otra vía de acceso.");
+    else msgEntrada("pCloud no ha aceptado la entrada: "+e.message);
+    NUBE.host="eapi.pcloud.com";
+  }finally{ $("eBtn").disabled=false; }
+}
+async function arrancaNube(){
+  $("cargandoIdx").style.display="flex";
+  try{
+    const j=await api("getfilelink",{path:NUBE.indice});
+    await cargaScript("https://"+j.hosts[0]+j.path);
+    $("cargandoIdx").style.display="none";
+    $("bSalir").style.display="";
+    iniciar(window.INDICE);
+  }catch(e){
+    if(e.codigo===1000||e.codigo===2000||e.codigo===2094||e.codigo===2095){ try{localStorage.removeItem("pcAuth");}catch(_){} NUBE.auth=""; pideEntrada("La sesión ha caducado. Vuelve a entrar."); }
+    else if(e instanceof TypeError) pideEntrada("No se pudo hablar con pCloud ("+e.message+").");
+    else { $("cargandoIdx").textContent="No se pudo cargar el índice: "+e.message; }
+  }
+}
+$("bSalir").onclick=()=>{ api("logout").catch(()=>{}); try{ localStorage.removeItem("pcAuth"); }catch(e){} location.reload(); };
+$("fEntrada").addEventListener("submit", entrar);
+
+if(MODO==="pc"){
+  cargaScript("indice.js").then(()=>iniciar(window.INDICE)).catch(()=>{ document.body.innerHTML='<div class="vacio">No encuentro <b>indice.js</b> junto a esta página.<br>Lanza «Generar indice del visor.bat».</div>'; });
+}else if(NUBE.auth){ arrancaNube(); } else { pideEntrada(); }
+
+/* ============ EL VISOR ============ */
+function iniciar(D){
+const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+const PERS = D.personas.map((p,i)=>{ const s=p.split("/"); return {i, ruta:p, nombre:s[s.length-1], grupo:s.slice(0,-1).join(" › ")}; });
+const FOTOS = D.fotos.map((f,i)=>{
+  const ruta=f[0], partes=ruta.split("/");
+  const carpeta = partes.length>2 ? partes[partes.length-2] : partes[0];
+  return {i, ruta, fecha:f[1]||"", lat:f[2], lon:f[3], est:f[4], pers:f[5], video:f[6]==="v",
+          ano:partes[0], evento:limpiaEvento(carpeta), carpeta};
+});
+function limpiaEvento(c){ return c.replace(/^\d{6}\s+\d{2}\s+/,"").replace(/^\d{4}[-_]\d{2}[-_]\d{2}\s*/,""); }
+FOTOS.sort((a,b)=> (b.fecha||"").localeCompare(a.fecha||"") || a.ruta.localeCompare(b.ruta));
+const fotosDePersona = new Map();
+FOTOS.forEach(f=>f.pers.forEach(p=>{ if(!fotosDePersona.has(p)) fotosDePersona.set(p,[]); fotosDePersona.get(p).push(f); }));
+
+/* ============ ESTADO Y FILTROS ============ */
+const E = { ano:"", texto:"", cinco:false, personas:new Set(), modo:"y" };
+let visibles = [];
+
+const anos=[...new Set(FOTOS.map(f=>f.ano))].sort().reverse();
+anos.forEach(a=>{ const o=document.createElement("option"); o.value=a; o.textContent=a; $("fAno").appendChild(o); });
+$("fAno").onchange = e => { E.ano=e.target.value; aplicar(); };
+let tTexto; $("fTexto").oninput = e => { clearTimeout(tTexto); tTexto=setTimeout(()=>{E.texto=e.target.value.trim(); aplicar();},180); };
+$("fCinco").onchange = e => { E.cinco=e.target.checked; aplicar(); };
+PERS.slice().sort((a,b)=>a.nombre.localeCompare(b.nombre,"es")).forEach(p=>{ const o=document.createElement("option"); o.value=p.nombre; $("dlPers").appendChild(o); });
+$("fAdd").addEventListener("change", e=>{ const n=norm(e.target.value.trim()); const p=PERS.find(x=>norm(x.nombre)===n); if(p){ E.personas.add(p.i); e.target.value=""; aplicar(); } });
+$("fModo").querySelectorAll("button").forEach(b=>b.onclick=()=>{ E.modo=b.dataset.m; aplicar(); });
+$("cuenta").textContent = FOTOS.length.toLocaleString("es-ES")+" elementos · "+ORIGEN.nombre;
+
+function norm(s){ return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase(); }
+function aplicar(){
+  const t = norm(E.texto);
+  visibles = FOTOS.filter(f =>
+    (!E.ano || f.ano===E.ano) &&
+    (!E.cinco || f.est===5) &&
+    (!t || norm(f.evento+" "+f.carpeta+" "+f.ano).includes(t)) &&
+    (!E.personas.size || (E.modo==="o" ? f.pers.some(p=>E.personas.has(p)) : [...E.personas].every(p=>f.pers.includes(p))))
+  );
+  pintaChips();
+  const conGps = visibles.filter(f=>f.lat!=null).length;
+  $("resumen").textContent = visibles.length.toLocaleString("es-ES")+" fotos y vídeos · "+conGps.toLocaleString("es-ES")+" en el mapa";
+  pintaRejilla();
+  if(mapaListo) pintaMapa(!!document.querySelector("#vMapa.activa"));
+  guarda();
+}
+function pintaChips(){
+  $("fModo").style.display = E.personas.size>1 ? "" : "none";
+  $("fModo").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.m===E.modo));
+  marcaPersonas();
+  const c=$("fPersonas"); c.innerHTML="";
+  E.personas.forEach(p=>{
+    const b=document.createElement("button"); b.className="chip on";
+    b.innerHTML=PERS[p].nombre+' <span class="x">✕</span>';
+    b.onclick=()=>{E.personas.delete(p); aplicar();};
+    c.appendChild(b);
+  });
+}
+function guarda(){ try{ localStorage.setItem("visorFiltros", JSON.stringify({ano:E.ano,cinco:E.cinco,p:[...E.personas],m:E.modo})); }catch(e){} }
+function recupera(){ try{ const g=JSON.parse(localStorage.getItem("visorFiltros")||"null"); if(g){ E.ano=g.ano||""; E.cinco=!!g.cinco; E.modo=g.m==="o"?"o":"y"; (g.p||[]).forEach(p=>{ if(PERS[p]) E.personas.add(p); }); $("fAno").value=E.ano; $("fCinco").checked=E.cinco; } }catch(e){} }
+
+/* ============ REJILLA (se pinta por tandas al bajar) ============ */
+let pintadas=0, grupoActual=null, rejillaActual=null;
+const TANDA=240;
+function pintaRejilla(){
+  $("lista").innerHTML=""; pintadas=0; grupoActual=null;
+  if(!visibles.length){ $("lista").innerHTML='<div class="vacio">Ninguna foto cumple los filtros.</div>'; return; }
+  masRejilla();
+}
+function claveMes(f){ return f.fecha ? f.fecha.slice(0,7) : "sin fecha"; }
+function tituloMes(k){ if(k==="sin fecha") return "Sin fecha"; const [a,m]=k.split("-"); return MESES[+m-1].replace(/^./,c=>c.toUpperCase())+" de "+a; }
+function masRejilla(){
+  const fin=Math.min(visibles.length, pintadas+TANDA);
+  for(let k=pintadas;k<fin;k++){
+    const f=visibles[k], g=claveMes(f);
+    if(g!==grupoActual){
+      grupoActual=g;
+      const sec=document.createElement("div"); sec.className="mes";
+      const eventos=[...new Set(visibles.filter(x=>claveMes(x)===g).map(x=>x.evento))].slice(0,4).join(" · ");
+      sec.innerHTML='<h2>'+tituloMes(g)+'</h2><div class="sub"></div><div class="rejilla"></div>';
+      sec.querySelector(".sub").textContent=eventos;
+      $("lista").appendChild(sec); rejillaActual=sec.querySelector(".rejilla");
+    }
+    rejillaActual.appendChild(celda(f,k));
+  }
+  pintadas=fin;
+}
+function celda(f,k,lista){
+  const b=document.createElement("button"); b.className="celda"; b.title=f.evento;
+  if(f.video){ b.innerHTML='<div class="vid"><b>▶</b>vídeo</div>'; }
+  else{
+    const im=new Image(); im.loading="lazy"; im.decoding="async"; im.alt=""; im.src=ORIGEN.mini(f.ruta);
+    im.onerror=()=>{ im.style.opacity=.15; };
+    b.appendChild(im);
+    if(f.est===5){ const s=document.createElement("span"); s.className="est"; s.textContent="★"; b.appendChild(s); }
+  }
+  b.onclick=()=>abre(k, lista||visibles);
+  return b;
+}
+new IntersectionObserver(es=>{ if(es[0].isIntersecting && pintadas<visibles.length) masRejilla(); },{rootMargin:"1200px"}).observe($("centinela"));
+
+/* ============ MAPA ============ */
+let mapa=null, capa=null, calor=null, calorOn=true, mapaListo=false, controlCapas=null;
+const UMBRAL=10; // por debajo de este zoom: solo calor
+function iniciaMapa(){
+  if(mapaListo) { mapa.invalidateSize(); pintaMapa(true); return; }
+  if(!window.L){ $("mapa").innerHTML='<div class="vacio">El mapa necesita conexión a internet.</div>'; return; }
+  document.documentElement.style.setProperty("--hfiltros", $("filtros").offsetHeight+"px");
+  mapa=L.map("mapa",{zoomControl:true, worldCopyJump:true, maxZoom:19}).setView([40.4,-3.7],6);
+  const ESRI="https://server.arcgisonline.com/ArcGIS/rest/services/";
+  const fondos={
+    "Calles": L.tileLayer(ESRI+"World_Street_Map/MapServer/tile/{z}/{y}/{x}",{maxZoom:19, attribution:"Tiles &copy; Esri"}),
+    "Satélite": L.tileLayer(ESRI+"World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19, attribution:"Tiles &copy; Esri"}),
+    "Topográfico": L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",{maxZoom:17, subdomains:"abc", attribution:'&copy; <a href="https://opentopomap.org">OpenTopoMap</a> &copy; OpenStreetMap'}),
+    "OpenStreetMap": L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19, attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'})
+  };
+  let elegido="Calles"; try{ const g=localStorage.getItem("visorFondo"); if(fondos[g]) elegido=g; }catch(e){}
+  fondos[elegido].addTo(mapa);
+  controlCapas=L.control.layers(fondos,null,{position:"topright"}).addTo(mapa);
+  try{ calorOn = localStorage.getItem("visorCalor")!=="0"; }catch(e){}
+  mapa.on("overlayadd",e=>{ if(e.layer===calor){ calorOn=true; try{localStorage.setItem("visorCalor","1");}catch(_){} ajustaCapas(); } });
+  mapa.on("overlayremove",e=>{ if(e.layer===calor){ calorOn=false; try{localStorage.setItem("visorCalor","0");}catch(_){} ajustaCapas(); } });
+  mapa.on("zoomend",ajustaCapas);
+  mapa.on("moveend",()=>{ clearTimeout(tPanel); tPanel=setTimeout(pintaPanel,150); });
+  mapa.on("click",e=>{ if(mapa.getZoom()<UMBRAL) mapa.setView(e.latlng, Math.min(mapa.getZoom()+3, UMBRAL+1)); });
+  mapa.on("baselayerchange",e=>{ try{ localStorage.setItem("visorFondo", e.name); }catch(_){} });
+  mapaListo=true;
+  preparaBusca();
+  setTimeout(()=>{ mapa.invalidateSize(); pintaMapa(true); },60);
+}
+/* --- buscador del mapa: tus eventos + lugares de OpenStreetMap --- */
+const EVENTOS=(()=>{ const m=new Map(); FOTOS.forEach(f=>{ if(f.lat==null) return; const k=f.ano+"|"+f.carpeta; if(!m.has(k)) m.set(k,{nombre:f.evento, ano:f.ano, pts:[]}); m.get(k).pts.push([f.lat,f.lon]); }); return [...m.values()]; })();
+let tBusca=null, resBusca=[], selBusca=-1;
+function buscaLugares(q){
+  const u1="https://photon.komoot.io/api/?limit=6&lang=default&lat=40.4&lon=-3.7&location_bias_scale=0.3&q="+encodeURIComponent(q);
+  return fetch(u1).then(r=>{ if(!r.ok) throw 0; return r.json(); }).then(j=>j.features.map(f=>{ const p=f.properties, c=f.geometry.coordinates;
+      const sub=[p.city,p.county,p.state,p.country].filter((x,i,a)=>x&&x!==p.name&&a.indexOf(x)===i).join(", ");
+      return {tipo:"lugar", nombre:p.name, sub, lat:c[1], lon:c[0], ext:p.extent?[[p.extent[3],p.extent[0]],[p.extent[1],p.extent[2]]]:null}; }))
+    .catch(()=>fetch("https://nominatim.openstreetmap.org/search?format=json&limit=6&accept-language=es&q="+encodeURIComponent(q))
+      .then(r=>r.json()).then(j=>j.map(x=>({tipo:"lugar", nombre:x.display_name.split(",")[0], sub:x.display_name.split(",").slice(1,4).join(",").trim(),
+        lat:+x.lat, lon:+x.lon, ext:x.boundingbox?[[+x.boundingbox[0],+x.boundingbox[2]],[+x.boundingbox[1],+x.boundingbox[3]]]:null}))));
+}
+function pintaBusca(nota){
+  const ul=$("buscaRes"); ul.innerHTML="";
+  resBusca.forEach((r,i)=>{ const li=document.createElement("li"); if(i===selBusca) li.className="on";
+    li.innerHTML="<span></span><small></small>";
+    li.firstChild.textContent=(r.tipo==="evento"?"📷 ":"📍 ")+r.nombre;
+    li.lastChild.textContent=r.sub||"";
+    li.onmousedown=e=>{ e.preventDefault(); irA(r); };
+    ul.appendChild(li); });
+  if(nota){ const li=document.createElement("li"); li.className="nota"; li.textContent=nota; ul.appendChild(li); }
+}
+function irA(r){
+  $("buscaRes").innerHTML=""; $("buscaTxt").blur();
+  if(r.tipo==="evento"){ mapa.fitBounds(L.latLngBounds(r.pts),{padding:[40,40],maxZoom:15}); return; }
+  if(r.ext) mapa.fitBounds(r.ext,{maxZoom:15}); else mapa.setView([r.lat,r.lon],13);
+}
+function preparaBusca(){
+  const caja=$("busca"); L.DomEvent.disableClickPropagation(caja); L.DomEvent.disableScrollPropagation(caja);
+  $("buscaTxt").addEventListener("input",e=>{
+    const q=e.target.value.trim(); clearTimeout(tBusca); selBusca=-1;
+    if(q.length<2){ resBusca=[]; pintaBusca(); return; }
+    const n=norm(q);
+    const ev=EVENTOS.filter(x=>norm(x.nombre).includes(n)).sort((a,b)=>b.pts.length-a.pts.length).slice(0,5)
+      .map(x=>({tipo:"evento", nombre:x.nombre, sub:x.ano+" · "+x.pts.length+" fotos", pts:x.pts}));
+    resBusca=ev; pintaBusca("buscando lugares…");
+    tBusca=setTimeout(()=>{ buscaLugares(q).then(l=>{ if($("buscaTxt").value.trim()!==q) return; resBusca=ev.concat(l); pintaBusca(l.length?"":"sin lugares con ese nombre"); })
+      .catch(()=>{ resBusca=ev; pintaBusca("no hay conexión para buscar lugares"); }); },350);
+  });
+  $("buscaTxt").addEventListener("keydown",e=>{
+    if(e.key==="ArrowDown"){ selBusca=Math.min(selBusca+1,resBusca.length-1); pintaBusca(); e.preventDefault(); }
+    else if(e.key==="ArrowUp"){ selBusca=Math.max(selBusca-1,0); pintaBusca(); e.preventDefault(); }
+    else if(e.key==="Enter"){ const r=resBusca[selBusca<0?0:selBusca]; if(r) irA(r); }
+    else if(e.key==="Escape"){ $("buscaRes").innerHTML=""; }
+  });
+  $("buscaTxt").addEventListener("blur",()=>setTimeout(()=>{ $("buscaRes").innerHTML=""; },150));
+}
+
+/* --- tamaño de miniaturas --- */
+const TAMS=[64,80,96,112,140,180];
+let tamF=3, tamP=2;
+try{ const g=JSON.parse(localStorage.getItem("visorTam")||"null"); if(g){ tamF=g.f; tamP=g.p; } }catch(e){}
+function aplicaTam(){ document.documentElement.style.setProperty("--celda",TAMS[tamF]+"px"); document.documentElement.style.setProperty("--celdaP",TAMS[tamP]+"px");
+  try{ localStorage.setItem("visorTam",JSON.stringify({f:tamF,p:tamP})); }catch(e){} }
+$("tamFotos").querySelectorAll("button").forEach(b=>b.onclick=()=>{ tamF=Math.max(0,Math.min(TAMS.length-1,tamF+ +b.dataset.d)); aplicaTam(); });
+document.querySelectorAll("#panel .tam button").forEach(b=>b.onclick=()=>{ tamP=Math.max(0,Math.min(TAMS.length-1,tamP+ +b.dataset.d)); aplicaTam(); });
+aplicaTam();
+
+let enZona=[], panelPintadas=0, tPanel=null, ignoraMov=false;
+function panelGrupo(lista, limites){
+  enZona=lista;
+  const eventos=[...new Set(lista.map(f=>f.evento))];
+  $("panelTit").innerHTML="<b></b><br><span></span><div class='acc'><button class='boton sec' id='pAcercar'>Acercar</button><button class='boton sec' id='pZona'>Ver toda la zona</button></div>";
+  $("panelTit").querySelector("b").textContent=lista.length.toLocaleString("es-ES")+(lista.length===1?" foto en este grupo":" fotos en este grupo");
+  $("panelTit").querySelector("span").textContent=eventos.slice(0,3).join(" · ")+(eventos.length>3?" y "+(eventos.length-3)+" más":"");
+  $("pAcercar").onclick=()=>{ mapa.fitBounds(limites.pad(0.3),{maxZoom:18}); };
+  $("pZona").onclick=()=>pintaPanel();
+  $("panelRej").innerHTML=""; panelPintadas=0; $("panel").scrollTop=0; masPanel();
+}
+function pintaPanel(){
+  if(!mapa) return;
+  const b=mapa.getBounds();
+  enZona=visibles.filter(f=>f.lat!=null && !f.video && b.contains([f.lat,f.lon]));
+  const eventos=[...new Set(enZona.map(f=>f.evento))];
+  $("panelTit").innerHTML="<b></b><br><span></span>";
+  $("panelTit").querySelector("b").textContent=enZona.length.toLocaleString("es-ES")+(enZona.length===1?" foto en esta zona":" fotos en esta zona");
+  $("panelTit").querySelector("span").textContent=eventos.length? eventos.slice(0,3).join(" · ")+(eventos.length>3?" y "+(eventos.length-3)+" más":"") : "Mueve o aleja el mapa para ver fotos.";
+  $("panelRej").innerHTML=""; panelPintadas=0; $("panel").scrollTop=0; masPanel();
+}
+function masPanel(){
+  const fin=Math.min(enZona.length, panelPintadas+150);
+  for(let k=panelPintadas;k<fin;k++) $("panelRej").appendChild(celda(enZona[k],k,enZona));
+  panelPintadas=fin;
+}
+$("panel").addEventListener("scroll",()=>{ const p=$("panel"); if(p.scrollTop+p.clientHeight>p.scrollHeight-600 && panelPintadas<enZona.length) masPanel(); });
+function ajustaCapas(){
+  if(!mapa||!capa) return;
+  const z=mapa.getZoom(), lejos = z<UMBRAL;
+  if(lejos){ if(mapa.hasLayer(capa)) mapa.removeLayer(capa); }
+  else if(!mapa.hasLayer(capa)) mapa.addLayer(capa);
+  if(calor){
+    if(calorOn && !mapa.hasLayer(calor)) mapa.addLayer(calor);
+    if(!calorOn && mapa.hasLayer(calor)) mapa.removeLayer(calor);
+    if(calor._canvas) calor._canvas.style.opacity = lejos ? "0.9" : "0.45";
+  }
+  // si el calor está apagado, de lejos se ven las burbujas
+  if(lejos && !calorOn && !mapa.hasLayer(capa)) mapa.addLayer(capa);
+  $("mapa").style.cursor = lejos && calorOn ? "zoom-in" : "";
+}
+function pintaMapa(encuadra){
+  if(capa) mapa.removeLayer(capa);
+  if(calor){ if(controlCapas) controlCapas.removeLayer(calor); mapa.removeLayer(calor); calor=null; }
+  capa=L.markerClusterGroup({showCoverageOnHover:false, maxClusterRadius:60, spiderfyOnMaxZoom:false, zoomToBoundsOnClick:false,
+    iconCreateFunction:c=>{
+      const ms=c.getAllChildMarkers(), n=ms.length;
+      const fs=ms.map(m=>visibles[m.k]).filter(Boolean);
+      const top=fs.filter(f=>f.est===5).concat(fs.filter(f=>f.est!==5)).slice(0,3).reverse();
+      const im=top.map(f=>'<i style="background-image:url(\''+ORIGEN.mini(f.ruta).replace(/'/g,"%27")+'\')"></i>').join("");
+      return L.divIcon({className:"", html:'<div class="pila">'+im+'<b>'+n.toLocaleString("es-ES")+'</b></div>', iconSize:[58,58], iconAnchor:[29,29]});
+    }});
+  const pts=[];
+  visibles.forEach((f,k)=>{
+    if(f.lat==null||f.video) return;
+    const ic=L.divIcon({className:"", html:'<div class="pin" style="background-image:url(\''+ORIGEN.mini(f.ruta).replace(/'/g,"%27")+'\')"></div>', iconSize:[44,44], iconAnchor:[22,22]});
+    const m=L.marker([f.lat,f.lon],{icon:ic}); m.k=k; m.on("click",()=>abre(k,visibles));
+    capa.addLayer(m); pts.push([f.lat,f.lon]);
+  });
+  // al pulsar un grupo: el panel enseña solo sus fotos (el mapa no se mueve)
+  capa.on("clusterclick", e=>{
+    const lista=e.layer.getAllChildMarkers().map(m=>visibles[m.k]).filter(Boolean);
+    panelGrupo(lista, e.layer.getBounds());
+  });
+  if(L.heatLayer){
+    calor=L.heatLayer(pts.map(p=>[p[0],p[1],1]),{radius:16, blur:20, maxZoom:13, minOpacity:0.35,
+      gradient:{0.2:"#2c7bb6",0.4:"#00a6ca",0.6:"#90eb9d",0.8:"#f9d057",1:"#d7191c"}});
+    controlCapas.addOverlay(calor,"Mapa de calor");
+  }
+  if(encuadra!==false && pts.length){ mapa.invalidateSize(); mapa.fitBounds(L.latLngBounds(pts),{padding:[30,30], maxZoom:14}); }
+  ajustaCapas(); pintaPanel();
+}
+
+/* ============ PERSONAS ============ */
+function pintaPersonas(){
+  const c=$("personas"); c.innerHTML="";
+  const grupos=new Map();
+  PERS.forEach(p=>{ const g=p.ruta.split("/")[0]; if(!grupos.has(g)) grupos.set(g,[]); grupos.get(g).push(p); });
+  ["Familia","Amigos","Mascotas",...[...grupos.keys()].filter(g=>!["Familia","Amigos","Mascotas"].includes(g))].forEach(g=>{
+    if(!grupos.has(g)) return;
+    const t=document.createElement("div"); t.className="grupo-t"; t.textContent=g; c.appendChild(t);
+    grupos.get(g).map(p=>({p, n:(fotosDePersona.get(p.i)||[]).length})).sort((a,b)=>b.n-a.n).forEach(({p,n})=>{
+      const fs=(fotosDePersona.get(p.i)||[]).filter(f=>!f.video);
+      const rep = fs.find(f=>f.est===5 && f.pers.length===1) || fs.find(f=>f.pers.length===1) || fs[0];
+      const b=document.createElement("button"); b.className="persona";
+      b.innerHTML='<div class="cara"></div><span class="marca">✓</span><div class="txt"><div class="nom"></div><div class="grp"></div></div>'; b.dataset.p=p.i;
+      if(rep) b.querySelector(".cara").style.backgroundImage="url('"+ORIGEN.mini(rep.ruta).replace(/'/g,"%27")+"')";
+      b.querySelector(".nom").textContent=p.nombre;
+      b.querySelector(".grp").textContent=n.toLocaleString("es-ES")+" fotos · "+p.grupo.split(" › ").slice(1).join(" › ");
+      b.onclick=()=>{ if(E.personas.has(p.i)) E.personas.delete(p.i); else E.personas.add(p.i); aplicar(); };
+      c.appendChild(b);
+    });
+  });
+}
+
+function marcaPersonas(){
+  document.querySelectorAll(".persona").forEach(b=>b.classList.toggle("sel", E.personas.has(+b.dataset.p)));
+  const n=E.personas.size, enP=document.querySelector("#vPersonas.activa");
+  $("barraSel").classList.toggle("on", !!(n && enP));
+  if(n) $("selTxt").textContent=[...E.personas].map(p=>PERS[p].nombre).join(", ")+" · "+visibles.length.toLocaleString("es-ES")+" fotos";
+}
+$("selLimpia").onclick=()=>{ E.personas.clear(); aplicar(); };
+$("selVer").onclick=()=>{ E.ano=""; $("fAno").value=""; aplicar(); cambia("vFotos"); window.scrollTo(0,0); };
+
+/* ============ PESTAÑAS ============ */
+function cambia(v){
+  document.querySelectorAll(".vista").forEach(s=>s.classList.toggle("activa", s.id===v));
+  document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on", b.dataset.v===v));
+  $("filtros").style.display = v==="vPersonas" ? "none" : "";
+  if(v==="vMapa") setTimeout(iniciaMapa,30);
+  if(v==="vPersonas" && !$("personas").children.length) pintaPersonas();
+  marcaPersonas();
+  try{ localStorage.setItem("visorVista", v); }catch(e){}
+}
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>cambia(b.dataset.v));
+
+/* ============ FOTO A PANTALLA COMPLETA ============ */
+let lbLista=[], lbK=0;
+function abre(k, lista){ lbLista=lista; lbK=k; $("lb").classList.add("on"); muestra(); }
+function cierra(){ $("lb").classList.remove("on"); const z=$("lbFoto"); z.querySelectorAll("img,video,.cargando").forEach(e=>e.remove()); }
+function fechaLarga(f){ if(!f) return "Sin fecha"; const d=new Date(f); if(isNaN(d)) return f; return d.toLocaleDateString("es-ES",{weekday:"short",day:"numeric",month:"long",year:"numeric"})+(f.slice(11,16)!=="00:00"?" · "+f.slice(11,16):""); }
+function muestra(){
+  const f=lbLista[lbK]; if(!f) return;
+  const z=$("lbFoto"); z.querySelectorAll("img,video,.cargando").forEach(e=>e.remove());
+  $("lbTit").innerHTML="<b></b><span></span>";
+  $("lbTit").querySelector("b").textContent=f.evento;
+  $("lbTit").querySelector("span").textContent=fechaLarga(f.fecha)+"  ·  "+(lbK+1)+" de "+lbLista.length;
+  $("lbMapa").style.display = f.lat!=null ? "" : "none";
+  if(f.video){
+    const v=document.createElement("video"); v.controls=true; z.appendChild(v);
+    const c=document.createElement("div"); c.className="cargando"; c.textContent="cargando vídeo…"; z.appendChild(c);
+    ORIGEN.video(f.ruta).then(u=>{ v.src=u; c.remove(); }).catch(e=>{ c.textContent="no se pudo abrir el vídeo"; });
+  }else{
+    const baja=new Image(); baja.className="baja"; baja.src=ORIGEN.mini(f.ruta); z.appendChild(baja);
+    const c=document.createElement("div"); c.className="cargando"; c.textContent="cargando original…"; z.appendChild(c);
+    const alta=new Image(); alta.style.opacity=0;
+    alta.onload=()=>{ alta.style.opacity=1; baja.remove(); c.remove(); };
+    alta.onerror=()=>{ c.textContent="no se pudo abrir el original"; };
+    alta.src=ORIGEN.grande(f.ruta); z.appendChild(alta);
+  }
+  const pie=$("lbPie"); pie.innerHTML="";
+  if(f.est){ const s=document.createElement("span"); s.textContent="★".repeat(f.est); s.style.color="#ffd970"; pie.appendChild(s); }
+  f.pers.forEach(p=>{ const b=document.createElement("button"); b.className="chip"; b.textContent=PERS[p].nombre;
+    b.title="Añadir a la búsqueda";
+    b.onclick=()=>{ cierra(); E.personas.add(p); aplicar(); cambia("vFotos"); window.scrollTo(0,0); };
+    pie.appendChild(b); });
+  // precarga la siguiente
+  const sig=lbLista[lbK+1]; if(sig && !sig.video){ const p=new Image(); p.src=ORIGEN.mini(sig.ruta); }
+}
+function paso(d){ const n=lbK+d; if(n>=0 && n<lbLista.length){ lbK=n; muestra(); } }
+$("lbAnt").onclick=()=>paso(-1); $("lbSig").onclick=()=>paso(1); $("lbCerrar").onclick=cierra;
+$("lbMapa").onclick=()=>{ const f=lbLista[lbK]; cierra(); cambia("vMapa"); setTimeout(()=>{ if(mapa) mapa.setView([f.lat,f.lon],16); },120); };
+document.addEventListener("keydown",e=>{ if(!$("lb").classList.contains("on")) return; if(e.key==="Escape") cierra(); if(e.key==="ArrowLeft") paso(-1); if(e.key==="ArrowRight") paso(1); });
+let x0=null; $("lbFoto").addEventListener("touchstart",e=>{x0=e.touches[0].clientX;},{passive:true});
+$("lbFoto").addEventListener("touchend",e=>{ if(x0==null) return; const dx=e.changedTouches[0].clientX-x0; if(Math.abs(dx)>50) paso(dx<0?1:-1); x0=null; });
+
+/* ============ ARRANQUE ============ */
+recupera();
+aplicar();
+try{ const v=localStorage.getItem("visorVista"); if(v && v!=="vFotos" && $(v)) cambia(v); }catch(e){}
+} // fin de iniciar
+</script>
+</body>
+</html>
